@@ -26,6 +26,8 @@
 */
 
 #include <algorithm>
+#include <cstdlib>
+#include <sstream>
 #include <cmath>
 #include <iomanip>
 #include <iostream>
@@ -34,6 +36,67 @@
 #include <vector>
 
 using namespace std;
+
+
+namespace ui {
+    const string RESET = "\033[0m";
+    const string BOLD = "\033[1m";
+    const string DIM = "\033[2m";
+    const string GREEN = "\033[38;5;114m";
+    const string TEAL = "\033[38;5;80m";
+    const string GOLD = "\033[38;5;221m";
+    const string PINK = "\033[38;5;218m";
+    const string BLUE = "\033[38;5;117m";
+    const string RED = "\033[38;5;203m";
+    const string WHITE = "\033[97m";
+    const string GRAY = "\033[38;5;245m";
+
+    void clear() {
+#ifdef _WIN32
+        system("cls");
+#else
+        cout << "\033[2J\033[H";
+#endif
+    }
+
+    void line(const string& c="─", int n=64) { cout << GRAY; for(int i=0;i<n;++i) cout << c; cout << RESET << "\n"; }
+
+    void title(const string& subtitle="N • P • K DECISION SUPPORT SYSTEM") {
+        cout << "\n";
+        cout << TEAL << "╭────────────────────────────────────────────────────────────────╮" << RESET << "\n";
+        cout << TEAL << "│" << RESET << "  " << BOLD << GREEN << "🌾 WYOMING FERTILITY" << RESET << "                              " << TEAL << "│" << RESET << "\n";
+        cout << TEAL << "│" << RESET << "     " << WHITE << subtitle << RESET << "                 " << TEAL << "│" << RESET << "\n";
+        cout << TEAL << "│" << RESET << "     " << DIM << "University of Wyoming / NRCS-based decision support" << RESET << "   " << TEAL << "│" << RESET << "\n";
+        cout << TEAL << "╰────────────────────────────────────────────────────────────────╯" << RESET << "\n\n";
+    }
+
+    void step(int n, const string& name) {
+        cout << BOLD << GOLD << "  STEP " << n << " OF 5" << RESET << "  " << DIM << "›" << RESET << "  " << BOLD << WHITE << name << RESET << "\n";
+        line();
+    }
+
+    void section(const string& name) {
+        cout << "\n" << BOLD << GREEN << "  " << name << RESET << "\n";
+        line("─", 58);
+    }
+
+    string bar(double value, double maxValue, int width=28) {
+        if (maxValue <= 0) maxValue = 1;
+        double ratio = value / maxValue; if (ratio < 0.0) ratio = 0.0; if (ratio > 1.0) ratio = 1.0;
+        int filled = static_cast<int>(ratio * width);
+        string out; for(int i=0;i<filled;++i) out += "█"; for(int i=filled;i<width;++i) out += "░"; return out;
+    }
+
+    void notice(const string& text) {
+        cout << "\n" << GOLD << "  ⚠  " << text << RESET << "\n";
+    }
+
+    void success(const string& text) {
+        cout << "\n" << GREEN << "  ✓  " << text << RESET << "\n";
+    }
+}
+
+using ui::RESET; using ui::BOLD; using ui::DIM; using ui::GREEN; using ui::TEAL; using ui::GOLD; using ui::PINK; using ui::BLUE; using ui::RED; using ui::WHITE; using ui::GRAY;
 
 enum class Texture { Coarse, Medium, Fine };
 enum class Water { Sufficient, Short, Dryland };
@@ -154,20 +217,20 @@ double askDouble(const string& prompt, double minValue = 0.0) {
 }
 
 Texture askTexture() {
-    cout << "\nSoil texture:\n"
-         << "  1. Coarse-textured\n"
-         << "  2. Medium-textured\n"
-         << "  3. Fine-textured / high-lime\n";
-    int x = askInt("Select: ", 1, 3);
+    ui::section("SOIL TEXTURE");
+    cout << "  " << TEAL << "[1]" << RESET << " Coarse-textured\n";
+    cout << "  " << TEAL << "[2]" << RESET << " Medium-textured\n";
+    cout << "  " << TEAL << "[3]" << RESET << " Fine-textured / high-lime\n";
+    int x = askInt("\n  › Select texture [1-3]: ", 1, 3);
     return static_cast<Texture>(x - 1);
 }
 
 Water askWater() {
-    cout << "\nWater supply:\n"
-         << "  1. Sufficient\n"
-         << "  2. Short / limited\n"
-         << "  3. Dryland\n";
-    int x = askInt("Select: ", 1, 3);
+    ui::section("WATER SUPPLY");
+    cout << "  " << BLUE << "[1]" << RESET << " Sufficient / irrigated\n";
+    cout << "  " << GOLD << "[2]" << RESET << " Short / limited\n";
+    cout << "  " << GRAY << "[3]" << RESET << " Dryland\n";
+    int x = askInt("\n  › Select water supply [1-3]: ", 1, 3);
     return static_cast<Water>(x - 1);
 }
 
@@ -442,42 +505,26 @@ double waterAdjusted(double value, Water water, double shortFactor) {
  history actually applies.
  */
 double croppingHistoryNAdjustment() {
-    cout << "\nCropping-history / manure N adjustment:\n";
-    cout << "  1. None\n";
-    cout << "  2. Beans: subtract 30 lb N/acre\n";
-    cout << "  3. Clean fallow: subtract 20 lb N/acre\n";
-    cout << "  4. Corn stalks: add 20 lb N per ton residue\n";
-    cout << "  5. Forage legume plowed down: enter % legume\n";
-    cout << "  6. Stable manure: add 1.2 lb N x % legume\n";
-    cout << "  7. Small-grain stubble: add 20 lb N per ton residue\n";
-    cout << "  8. Current manure: add 5 lb N per ton\n";
+    ui::section("NITROGEN CREDIT / CROPPING HISTORY");
+    cout << "  " << TEAL << "[1]" << RESET << " None\n";
+    cout << "  " << TEAL << "[2]" << RESET << " Beans — subtract 30 lb N/acre\n";
+    cout << "  " << TEAL << "[3]" << RESET << " Clean fallow — subtract 20 lb N/acre\n";
+    cout << "  " << TEAL << "[4]" << RESET << " Corn stalks — add 20 lb N/ton residue\n";
+    cout << "  " << TEAL << "[5]" << RESET << " Forage legume plowed down\n";
+    cout << "  " << TEAL << "[6]" << RESET << " Stable manure\n";
+    cout << "  " << TEAL << "[7]" << RESET << " Small-grain stubble — add 20 lb N/ton\n";
+    cout << "  " << TEAL << "[8]" << RESET << " Current manure — add 5 lb N/ton\n";
 
-    int choice = askInt("Select: ", 1, 8);
-
+    int choice = askInt("\n  › Select adjustment [1-8]: ", 1, 8);
     switch (choice) {
         case 1: return 0;
         case 2: return -30;
         case 3: return -20;
-        case 4: {
-            double tons = askDouble("Tons of corn-stalk residue/acre: ");
-            return 20.0 * tons;
-        }
-        case 5: {
-            double pct = askDouble("% legume in previous stand: ");
-            return 0.8 * pct;
-        }
-        case 6: {
-            double pct = askDouble("% legume represented in manure source: ");
-            return 1.2 * pct;
-        }
-        case 7: {
-            double tons = askDouble("Tons of small-grain stubble/acre: ");
-            return 20.0 * tons;
-        }
-        case 8: {
-            double tons = askDouble("Tons manure/acre: ");
-            return 5.0 * tons;
-        }
+        case 4: return 20.0 * askDouble("  › Tons of corn-stalk residue/acre: ");
+        case 5: return 0.8 * askDouble("  › % legume in previous stand: ");
+        case 6: return 1.2 * askDouble("  › % legume represented in manure source: ");
+        case 7: return 20.0 * askDouble("  › Tons of small-grain stubble/acre: ");
+        case 8: return 5.0 * askDouble("  › Tons manure/acre: ");
     }
     return 0;
 }
@@ -721,209 +768,159 @@ Recommendation calculateRecommendation(Crop crop,
 }
 
 void printRecommendation(const Recommendation& r) {
-    cout << "\n========================================\n";
-    cout << " NUTRIENT RECOMMENDATION\n";
-    cout << "========================================\n";
+    ui::section("NUTRIENT REQUIREMENT");
     cout << fixed << setprecision(1);
-    cout << "N     : " << r.N << " lb/acre\n";
-    cout << "P2O5  : " << r.P2O5 << " lb/acre\n";
-    cout << "K2O   : " << r.K2O << " lb/acre\n";
+    cout << "\n  " << BOLD << "NITROGEN" << RESET << "              " << BOLD << "PHOSPHORUS" << RESET << "            " << BOLD << "POTASSIUM" << RESET << "\n";
+    cout << "  " << GREEN << setw(8) << r.N << RESET << " lb N/acre      "
+         << GREEN << setw(8) << r.P2O5 << RESET << " lb P₂O₅/acre      "
+         << GREEN << setw(8) << r.K2O << RESET << " lb K₂O/acre\n";
+    cout << "\n  N     " << GREEN << ui::bar(r.N, max({r.N,r.P2O5,r.K2O})) << RESET << "\n";
+    cout << "  P₂O₅  " << BLUE << ui::bar(r.P2O5, max({r.N,r.P2O5,r.K2O})) << RESET << "\n";
+    cout << "  K₂O   " << GOLD << ui::bar(r.K2O, max({r.N,r.P2O5,r.K2O})) << RESET << "\n";
 
-    cout << "\nFertilizer-grade equivalent:\n";
-    cout << "N-P2O5-K2O = "
-         << round(r.N) << "-"
-         << round(r.P2O5) << "-"
-         << round(r.K2O) << "\n";
+    cout << "\n  " << BOLD << "FERTILIZER-GRADE EQUIVALENT" << RESET << "\n";
+    cout << "  " << TEAL << "N - P₂O₅ - K₂O" << RESET << "   "
+         << BOLD << round(r.N) << " - " << round(r.P2O5) << " - " << round(r.K2O) << RESET << "\n";
 }
 
 void printProducts(const ProductRates& p) {
-    cout << "\n========================================\n";
-    cout << " FERTILIZER PRODUCT CALCULATION\n";
-    cout << "========================================\n";
-
+    ui::section("FERTILIZER PRODUCT PLAN");
     cout << fixed << setprecision(1);
-    cout << "Urea (46-0-0): " << p.urea << " lb/acre\n";
-    cout << "DAP  (18-46-0): " << p.DAP << " lb/acre\n";
-    cout << "KCl  (0-0-62): " << p.KCl << " lb/acre\n";
-
-    cout << "\nN supplied:    " << p.NFromProducts << " lb/acre\n";
-    cout << "P2O5 supplied: " << p.P2O5FromProducts << " lb/acre\n";
-    cout << "K2O supplied:  " << p.K2OFromProducts << " lb/acre\n";
-
-    cout << "\nApproximate total blend:\n"
-         << p.urea + p.DAP + p.KCl << " lb fertilizer/acre\n";
+    cout << "\n  " << GREEN << "UREA" << RESET << "  46-0-0     " << setw(10) << p.urea << " lb/acre\n";
+    cout << "  " << BLUE << "DAP" << RESET << "   18-46-0    " << setw(10) << p.DAP << " lb/acre\n";
+    cout << "  " << GOLD << "KCl" << RESET << "   0-0-62     " << setw(10) << p.KCl << " lb/acre\n";
+    cout << "\n";
+    ui::line("─", 58);
+    cout << "  N supplied       " << setw(10) << p.NFromProducts << " lb/acre\n";
+    cout << "  P₂O₅ supplied    " << setw(10) << p.P2O5FromProducts << " lb/acre\n";
+    cout << "  K₂O supplied     " << setw(10) << p.K2OFromProducts << " lb/acre\n";
+    cout << "\n  " << BOLD << "TOTAL BLEND" << RESET << "        " << BOLD << (p.urea + p.DAP + p.KCl) << " lb fertilizer/acre" << RESET << "\n";
 }
 
 Crop askCrop() {
-    cout << "\n========================================\n";
-    cout << " WYOMING FERTILITY CALCULATOR\n";
-    cout << "========================================\n";
-    cout << " 1. Established grass / legume\n";
-    cout << " 2. Corn\n";
-    cout << " 3. Millet\n";
-    cout << " 4. Barley / oats / wheat\n";
-    cout << " 5. Dry bean\n";
-    cout << " 6. Potato\n";
-    cout << " 7. Safflower\n";
-    cout << " 8. Sugarbeet\n";
-    cout << " 9. Sunflower\n";
-    cout << "10. Lawn\n";
-    cout << "11. Fruit / ornamental / vegetable\n";
-
-    int x = askInt("Select crop: ", 1, 11);
+    ui::section("CROP SELECTION");
+    struct Item { int n; const char* icon; const char* name; } items[] = {
+        {1,"🌱","Established grass / legume"},{2,"🌽","Corn"},{3,"🌾","Millet"},
+        {4,"🌾","Barley / oats / wheat"},{5,"🫘","Dry bean"},{6,"🥔","Potato"},
+        {7,"🌻","Safflower"},{8,"🥬","Sugarbeet"},{9,"🌻","Sunflower"},
+        {10,"🏡","Lawn"},{11,"🌿","Fruit / ornamental / vegetable"}
+    };
+    for (const auto& i : items) {
+        cout << "  " << TEAL << setw(2) << setfill('0') << i.n << setfill(' ') << RESET
+             << "  " << i.icon << "  " << i.name << "\n";
+    }
+    int x = askInt("\n  › Select crop [1-11]: ", 1, 11);
     return static_cast<Crop>(x - 1);
 }
 
 int main() {
     cout << fixed << setprecision(1);
+    ui::clear();
+    ui::title();
+
+    cout << "  " << DIM << "A field-level nutrient planning assistant for Wyoming crops." << RESET << "\n";
+    cout << "  " << DIM << "Source: University of Wyoming fertilizer recommendation tables." << RESET << "\n";
 
     Crop crop = askCrop();
 
     SoilSample soil;
     Field field;
 
-    cout << "\n--- SOIL SAMPLE ---\n";
-    soil.no3N = askDouble("NO3-N (ppm): ");
-    soil.P = askDouble("Extractable P (ppm): ");
-    soil.K = askDouble("Extractable K (ppm): ");
+    ui::clear();
+    ui::title("SOIL & FIELD DATA");
+    ui::step(2, "SOIL TEST");
 
-    /*
-      Organic matter is used by several crop tables.
-      It is still collected for all crops so the program can
-      consistently represent a complete soil sample.
-    */
-    soil.organicMatter = askDouble("Organic matter (%): ");
+    cout << "\n  Enter values from your soil test.\n\n";
+    soil.no3N = askDouble("  NO₃-N (ppm)             › ");
+    soil.P = askDouble("  Extractable P (ppm)     › ");
+    soil.K = askDouble("  Extractable K (ppm)     › ");
+    soil.organicMatter = askDouble("  Organic matter (%)      › ");
 
+    ui::step(3, "FIELD CONDITIONS");
     field.texture = askTexture();
     field.water = askWater();
 
-    cout << "\n--- FIELD INFORMATION ---\n";
-
+    ui::step(4, "YIELD TARGET");
     if (crop == Crop::EstablishedGrass) {
-        field.vegetationGrassPercent =
-            askDouble("Grass percentage of stand (%): ");
+        field.vegetationGrassPercent = askDouble("\n  Grass percentage of stand (%) › ");
         field.baseYield = 6.0;
-        field.yieldGoal =
-            askDouble("Hay yield goal (tons/acre): ");
-    }
-    else if (crop == Crop::Corn) {
+        field.yieldGoal = askDouble("  Hay yield goal (tons/acre)     › ");
+    } else if (crop == Crop::Corn) {
         field.baseYield = 150.0;
-        field.yieldGoal =
-            askDouble("Corn yield goal (bu/acre): ");
-    }
-    else if (crop == Crop::Millet) {
+        field.yieldGoal = askDouble("\n  Corn yield goal (bu/acre)      › ");
+    } else if (crop == Crop::Millet) {
         field.baseYield = 35.0;
-        field.yieldGoal =
-            askDouble("Millet yield goal (bu/acre): ");
-    }
-    else if (crop == Crop::SmallGrain) {
+        field.yieldGoal = askDouble("\n  Millet yield goal (bu/acre)    › ");
+    } else if (crop == Crop::SmallGrain) {
         field.baseYield = 90.0;
-        field.yieldGoal =
-            askDouble("Small-grain yield goal (bu/acre): ");
-    }
-    else if (crop == Crop::DryBean) {
+        field.yieldGoal = askDouble("\n  Small-grain yield goal (bu/acre) › ");
+    } else if (crop == Crop::DryBean) {
         field.baseYield = 30.0;
-        field.yieldGoal =
-            askDouble("Dry-bean yield goal (cwt/acre): ");
-    }
-    else if (crop == Crop::Potato) {
+        field.yieldGoal = askDouble("\n  Dry-bean yield goal (cwt/acre) › ");
+    } else if (crop == Crop::Potato) {
         field.baseYield = 350.0;
-        field.yieldGoal =
-            askDouble("Potato yield goal (cwt/acre): ");
-    }
-    else if (crop == Crop::Safflower) {
+        field.yieldGoal = askDouble("\n  Potato yield goal (cwt/acre)   › ");
+    } else if (crop == Crop::Safflower) {
         field.baseYield = 1400.0;
-        field.yieldGoal =
-            askDouble("Safflower yield goal (lb/acre): ");
-    }
-    else if (crop == Crop::Sugarbeet) {
+        field.yieldGoal = askDouble("\n  Safflower yield goal (lb/acre) › ");
+    } else if (crop == Crop::Sugarbeet) {
         field.baseYield = 30.0;
-        field.yieldGoal =
-            askDouble("Sugarbeet yield goal (tons/acre): ");
-    }
-    else if (crop == Crop::Sunflower) {
+        field.yieldGoal = askDouble("\n  Sugarbeet yield goal (tons/acre) › ");
+    } else if (crop == Crop::Sunflower) {
         field.baseYield = 30.0;
-        field.yieldGoal =
-            askDouble("Sunflower yield goal (cwt/acre): ");
-    }
-    else {
+        field.yieldGoal = askDouble("\n  Sunflower yield goal (cwt/acre) › ");
+    } else {
         field.baseYield = 0.0;
         field.yieldGoal = 0.0;
     }
 
-    Recommendation recommendation =
-        calculateRecommendation(crop, soil, field);
+    Recommendation recommendation = calculateRecommendation(crop, soil, field);
 
-    /*
-      Water-supply adjustments are intentionally conservative here.
-      The supplied guide's water-supply section describes "short"
-      and "dryland" conditions and provides crop-specific special
-      statements. The exact adjustment differs by crop and situation,
-      so this implementation only applies the explicit crop-table
-      adjustments already encoded above rather than inventing a
-      universal percentage reduction.
-    */
-
-    if (crop == Crop::EstablishedGrass ||
-        crop == Crop::Corn ||
-        crop == Crop::SmallGrain ||
-        crop == Crop::Potato ||
-        crop == Crop::Sugarbeet ||
-        crop == Crop::Sunflower) {
-
+    if (crop == Crop::EstablishedGrass || crop == Crop::Corn ||
+        crop == Crop::SmallGrain || crop == Crop::Potato ||
+        crop == Crop::Sugarbeet || crop == Crop::Sunflower) {
         if (field.water != Water::Sufficient) {
-            cout << "\nNOTICE: The selected crop has water-supply "
-                    "special statements in the Wyoming guide.\n";
-            cout << "Review the crop-specific limited-water or "
-                    "dryland statement before field use.\n";
+            ui::notice("The selected crop has water-supply special statements in the Wyoming guide. Review the crop-specific limited-water or dryland statement before field use.");
         }
     }
 
-    /*
-      Optional cropping-history credit.
-      This is primarily intended for situations where the Wyoming
-      guide's N adjustment table applies.
-    */
-    if (crop == Crop::EstablishedGrass ||
-        crop == Crop::Corn ||
-        crop == Crop::SmallGrain) {
-
-        int useHistory = askInt(
-            "\nApply an N cropping-history/manure adjustment? "
-            "(1=yes, 2=no): ", 1, 2);
-
+    if (crop == Crop::EstablishedGrass || crop == Crop::Corn || crop == Crop::SmallGrain) {
+        cout << "\n  Apply an N cropping-history/manure adjustment?\n";
+        cout << "  " << TEAL << "[1]" << RESET << " Yes     " << GRAY << "[2]" << RESET << " No\n";
+        int useHistory = askInt("  › Select [1-2]: ", 1, 2);
         if (useHistory == 1) {
             double adjustment = croppingHistoryNAdjustment();
-            recommendation.N =
-                max(0.0, recommendation.N + adjustment);
+            recommendation.N = max(0.0, recommendation.N + adjustment);
         }
     }
+
+    ui::clear();
+    ui::title("FIELD RECOMMENDATION");
+    ui::step(5, "RESULTS");
+
+    ui::section("FIELD PROFILE");
+    cout << "  Crop                 " << BOLD << cropName(crop) << RESET << "\n";
+    cout << "  Soil texture          " << textureName(field.texture) << "\n";
+    cout << "  Water supply          " << waterName(field.water) << "\n";
+    cout << "  NO₃-N                 " << soil.no3N << " ppm\n";
+    cout << "  Extractable P         " << soil.P << " ppm\n";
+    cout << "  Extractable K         " << soil.K << " ppm\n";
+    cout << "  Organic matter        " << soil.organicMatter << " %\n";
 
     printRecommendation(recommendation);
 
-    int products = askInt(
-        "\nCalculate urea + DAP + KCl application rates? "
-        "(1=yes, 2=no): ", 1, 2);
-
+    int products = askInt("\n  Calculate Urea + DAP + KCl application rates? [1=yes, 2=no]: ", 1, 2);
     if (products == 1) {
-        ProductRates rates =
-            calculateProducts(recommendation);
+        ProductRates rates = calculateProducts(recommendation);
         printProducts(rates);
     }
 
-    cout << "\n========================================\n";
-    cout << " SUMMARY\n";
-    cout << "========================================\n";
-    cout << "Crop: " << cropName(crop) << "\n";
-    cout << "Texture: " << textureName(field.texture) << "\n";
-    cout << "Water supply: " << waterName(field.water) << "\n";
+    ui::section("FIELD SUMMARY");
+    cout << "  " << GREEN << "✓ Calculation complete" << RESET << "\n";
+    cout << "  Crop:       " << cropName(crop) << "\n";
+    cout << "  N-P₂O₅-K₂O: " << round(recommendation.N) << "-" << round(recommendation.P2O5) << "-" << round(recommendation.K2O) << "\n";
 
-    cout << "\nThis calculator is based on the supplied\n";
-    cout << "University of Wyoming fertilizer guide.\n";
-    cout << "Verify the crop, yield goal, water condition,\n";
-    cout << "soil-test method, and all special statements\n";
-    cout << "before using recommendations in an actual\n";
-    cout << "nutrient management plan.\n";
-
+    ui::notice("This is decision-support software based on the supplied University of Wyoming fertilizer guide. Verify crop, yield goal, water condition, soil-test method, and all special statements before using recommendations in an actual nutrient management plan.");
+    cout << "\n  " << DIM << "Not an official NRCS software product." << RESET << "\n\n";
     return 0;
 }
